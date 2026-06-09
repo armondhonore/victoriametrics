@@ -785,22 +785,7 @@ statusCode=401
 Unauthorized`
 	f(simpleCfgStr, request, responseExpected)
 
-	// token without vm_access claim is rejected even with a matching custom claim
-	request = httptest.NewRequest(`GET`, "http://some-host.com/abc", nil)
-	request.Header.Set(`Authorization`, `Bearer `+roleToken)
-	responseExpected = `
-statusCode=401
-Unauthorized`
-	f(fmt.Sprintf(`
-users:
-- jwt:
-    public_keys:
-    - %q
-    match_claims:
-      role: admin
-  url_prefix: {BACKEND}/foo`, string(publicKeyPEM)), request, responseExpected)
-
-	// token without vm_access claim is accepted when skip_vm_access_validation is set
+	// token without vm_access claim is accepted when it matches custom claims
 	request = httptest.NewRequest(`GET`, "http://some-host.com/abc", nil)
 	request.Header.Set(`Authorization`, `Bearer `+roleToken)
 	responseExpected = `
@@ -813,7 +798,6 @@ users:
 - jwt:
     public_keys:
     - %q
-    skip_vm_access_validation: true
     match_claims:
       role: admin
   url_prefix: {BACKEND}/foo`, string(publicKeyPEM)), request, responseExpected)
