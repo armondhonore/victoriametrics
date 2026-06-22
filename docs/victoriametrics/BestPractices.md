@@ -20,6 +20,32 @@ It is recommended to run the latest available release of VictoriaMetrics from [t
 
 There is no need to tune VictoriaMetrics because it uses reasonable defaults for command-line flags. These flags are automatically adjusted for the available CPU and RAM resources. There is no need in Operating System tuning because VictoriaMetrics is optimized for default OS settings. The only option is to increase the limit on the [number of open files in the OS](https://medium.com/@muhammadtriwibowo/set-permanently-ulimit-n-open-files-in-ubuntu-4d61064429a), so VictoriaMetrics could accept more incoming connections and could keep open more data files.
 
+## Memory
+
+VictoriaMetrics components detect the available memory at startup as the smaller of the host RAM and the cgroup memory limit.
+To keep them stable:
+
+1. Do not set `GOMEMLIMIT`. VictoriaMetrics paces garbage collection with `GOGC` and does not use `GOMEMLIMIT` for sizing.
+   `GOMEMLIMIT` bounds only Go runtime memory, not the process's total RSS, off-heap caches, mmap-ed files,
+   or the OS page cache, so it is not a reliable way to size VictoriaMetrics containers. It can curb Go heap growth,
+   but set too low it makes the garbage collector run more often than `GOGC` dictates,
+   spending in the worst case up to ~50% of CPU time on GC —
+   the ceiling enforced by Go's [GC CPU limiter](https://go.dev/doc/gc-guide).
+   Control memory with the container memory limit plus `-memory.allowedPercent` or `-memory.allowedBytes`.
+
+1. Do not hand-tune cache sizes with `-storage.cacheSize*` flags — it frequently causes OOM.
+   If a component needs larger caches, move it to a host with more memory.
+   See [Cache tuning](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#cache-tuning).
+
+1. Do not use the Vertical Pod Autoscaler (VPA) for `vmstorage`. Cache sizes are derived from the memory limit read at startup.
+   Modes that recreate the pod (`Recreate`, `Auto`) reset the caches and force a cold start,
+   causing slow inserts and query latency spikes. In-place resizing is not picked up at runtime,
+   so `vmstorage` keeps the budget and `vm_available_memory_bytes` from startup, which also skews the dashboards.
+   Use fixed memory resources instead.
+
+1. Leave headroom for the OS page cache and workload spikes —
+   see [capacity planning](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/#capacity-planning).
+
 ## Swap
 
 It is recommended to disable swap for machines running [vmstorage](https://docs.victoriametrics.com/victoriametrics/cluster-victoriametrics/#storage) or [Single-node VictoriaMetrics](https://docs.victoriametrics.com/victoriametrics/single-server-victoriametrics/).
