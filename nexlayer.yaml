@@ -1,0 +1,12 @@
+application:
+  name: victoriametrics
+  pods:
+  - name: app
+    image: victoriametrics/victoria-metrics:latest
+    path: /
+    servicePorts:
+    - 8428
+    volumes:
+    - name: vm-data
+      mountPath: /victoria-metrics-data
+      size: 10Gi
