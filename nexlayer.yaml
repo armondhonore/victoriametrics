@@ -2,7 +2,7 @@ application:
   name: victoriametrics
   pods:
   - name: app
-    image: victoriametrics/victoria-metrics:latest
+    image: mirror.gcr.io/victoriametrics/victoria-metrics:v1.115.0
     path: /
     servicePorts:
     - 8428
